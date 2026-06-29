@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 
@@ -11,19 +10,28 @@ import (
 var baseURL string = "https://www.saramin.co.kr/zf_user/search/recruit?&searchword=python"
 
 func main() {
-	pages := getPages()
-	fmt.Println(pages)
+	totalPages := getPages()
+	for i := 0; i < totalPages; i++ {
+		getPage(i)
+	}
+}
+
+func getPage(page int) {
+
 }
 
 func getPages() int {
+	pages := 0
 	res, err := http.Get(baseURL)
 	checkErr(err)
 	checkCode(res)
 	defer res.Body.Close()
 	doc, err := goquery.NewDocumentFromReader(res.Body)
 	checkErr(err)
-	doc.Find("pagination").Each()
-	return 0
+	doc.Find(".pagination").Each(func(i int, s *goquery.Selection) {
+		pages = s.Find("a").Length()
+	})
+	return pages
 }
 
 func checkErr(err error) {
