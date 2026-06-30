@@ -8,6 +8,8 @@ import (
 	"github.com/labstack/echo/v5/middleware"
 )
 
+const fileName string = "jobs.csv"
+
 func handleHome(c *echo.Context) error {
 	return c.File("home.html")
 }
@@ -15,11 +17,10 @@ func handleHome(c *echo.Context) error {
 func handleScrape(c *echo.Context) error {
 	term := strings.ToLower(c.FormValue("term"))
 	scrapper.Scrape(term)
-	return nil
+	return c.Attachment(fileName, fileName)
 }
 
 func main() {
-	scrapper.Scrape("python")
 	e := echo.New()
 	e.Use(middleware.RequestLogger())
 	e.Use(middleware.Recover())

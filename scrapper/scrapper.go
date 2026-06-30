@@ -103,6 +103,8 @@ func extractJob(card *goquery.Selection, c chan<- extractedJob) {
 func writeJobs(jobs []extractedJob) {
 	file, err := os.Create("jobs.csv")
 	checkErr(err)
+	utf8bom := []byte{0xEF, 0xBB, 0xBF}
+	file.Write(utf8bom)
 	w := csv.NewWriter(file)
 	defer w.Flush()
 	headers := []string{"Link", "Title", "Location", "Sector"}
