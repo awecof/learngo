@@ -1,9 +1,11 @@
 package main
 
 import (
+	"encoding/csv"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 
@@ -26,7 +28,28 @@ func main() {
 		extractedJobs := getPage(i + 1)
 		jobs = append(jobs, extractedJobs...)
 	}
-	fmt.Println(jobs)
+	writeJobs(jobs)
+	fmt.Println("Done Extracting:", len(jobs))
+}
+
+func writeJobs(jobs []extractedJob) {
+	file, err := os.Create("jobs.csv")
+	checkErr(err)
+	w := csv.NewWriter(file)
+	defer w.Flush()
+	headers := []string{"Value", "Title", "Location", "Sector"}
+	err = w.Write(headers)
+	checkErr(err)
+	for _, job := range jobs {
+		jobSlice := []string{
+			"https://www.saramin.co.kr/zf_user/jobs/relay/view?rec_idx=" + job.value,
+			job.title,
+			job.location,
+			job.sector,
+		}
+		err = w.Write(jobSlice)
+		checkErr(err)
+	}
 }
 
 func getPage(page int) []extractedJob {
@@ -50,7 +73,15 @@ func getPage(page int) []extractedJob {
 func extractJob(card *goquery.Selection) extractedJob {
 	value, _ := card.Attr("value")
 	title := cleanString(card.Find(".area_job>.job_tit>a").Text())
-	location := cleanString(card.Find(".area_job>.job_condition>span>a").Text())
+	location := ""
+	card.Find(".area_job>.job_condition>span>a").Each(func(i int, s *goquery.Selection) {
+		text := s.Text()
+		if location != "" {
+			text = " " + s.Text()
+		}
+		location += text
+
+	})
 	sectors := []string{}
 	card.Find(".job_sector>b>a").Each(func(i int, s *goquery.Selection) {
 		sectors = append(sectors, s.Text())
