@@ -23,9 +23,13 @@ var baseURL string = "https://www.saramin.co.kr/zf_user/search/recruit?&searchwo
 
 func main() {
 	var jobs []extractedJob
+	c := make(chan []extractedJob)
 	totalPages := getPages()
 	for i := 0; i < totalPages; i++ {
-		extractedJobs := getPage(i + 1)
+		go getPage(i+1, c)
+	}
+	for i := 0; i < totalPages; i++ {
+		extractedJobs := <-c
 		jobs = append(jobs, extractedJobs...)
 	}
 	writeJobs(jobs)
@@ -46,7 +50,7 @@ func getPages() int {
 	return pages
 }
 
-func getPage(page int) []extractedJob {
+func getPage(page int, mainC chan<- []extractedJob) {
 	var jobs []extractedJob
 	c := make(chan extractedJob)
 	pageURL := baseURL + "&recruitPage=" + strconv.Itoa(page)
@@ -65,7 +69,7 @@ func getPage(page int) []extractedJob {
 		job := <-c
 		jobs = append(jobs, job)
 	}
-	return jobs
+	mainC <- jobs
 }
 
 func extractJob(card *goquery.Selection, c chan<- extractedJob) {
