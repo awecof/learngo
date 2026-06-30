@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -13,20 +14,23 @@ type extractedJob struct {
 	value    string
 	title    string
 	location string
-	salary   string
-	summary  string
+	sector   string
 }
 
 var baseURL string = "https://www.saramin.co.kr/zf_user/search/recruit?&searchword=python"
 
 func main() {
+	var jobs []extractedJob
 	totalPages := getPages()
 	for i := 0; i < totalPages; i++ {
-		getPage(i + 1)
+		extractedJobs := getPage(i + 1)
+		jobs = append(jobs, extractedJobs...)
 	}
+	fmt.Println(jobs)
 }
 
-func getPage(page int) {
+func getPage(page int) []extractedJob {
+	var jobs []extractedJob
 	pageURL := baseURL + "&recruitPage=" + strconv.Itoa(page)
 	fmt.Println("Requesting", pageURL)
 	res, err := http.Get(pageURL)
@@ -37,12 +41,35 @@ func getPage(page int) {
 	checkErr(err)
 	searchCards := doc.Find(".item_recruit")
 	searchCards.Each(func(i int, card *goquery.Selection) {
-		value, _ := card.Attr("value")
-		title := card.Find(".area_job>.job_tit>a").Text()
-		location := card.Find(".area_job>.job_condition>span>a").Text()
-		fmt.Println("https://www.saramin.co.kr/zf_user/jobs/relay/view?rec_idx=" + value)
-		fmt.Println("title:", title, "location:", location)
+		job := extractJob(card)
+		jobs = append(jobs, job)
 	})
+	return jobs
+}
+
+func extractJob(card *goquery.Selection) extractedJob {
+	value, _ := card.Attr("value")
+	title := cleanString(card.Find(".area_job>.job_tit>a").Text())
+	location := cleanString(card.Find(".area_job>.job_condition>span>a").Text())
+	sectors := []string{}
+	card.Find(".job_sector>b>a").Each(func(i int, s *goquery.Selection) {
+		sectors = append(sectors, s.Text())
+	})
+	card.Find(".job_sector>a").Each(func(i int, s *goquery.Selection) {
+		sectors = append(sectors, s.Text())
+	})
+	sector := strings.Join(sectors, " ")
+	return extractedJob{
+		value:    value,
+		title:    title,
+		location: location,
+		sector:   sector,
+	}
+
+}
+
+func cleanString(str string) string {
+	return strings.Join(strings.Fields(str), " ")
 }
 
 func getPages() int {
